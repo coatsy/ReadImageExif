@@ -36,9 +36,10 @@ namespace ReadImageExif
             await p.CreateDatabaseAsync();
             await p.CreateContainerAsync();
 
-
+            // only jpgs taken in the last day
+            // the commented out lines were used for testing, but are left them in there for reference
             foreach (var file in di.EnumerateFileSystemInfos()
-                                .Where(f => f.Extension == ".jpg")
+                                .Where(f => f.Extension == ".jpg" && f.CreationTimeUtc >= DateTime.UtcNow.AddDays(-1))
                                 // .OrderByDescending(f => f.CreationTimeUtc)
                                 // .Skip(1000)
                                 // .Take(10)
