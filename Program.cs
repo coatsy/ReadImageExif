@@ -5,11 +5,14 @@ using System.IO;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace ReadImageExif
 {
     class Program
     {
+        const string SETTINGS_FILE = "./settings.json";
+        const string DEFAULT_PATH = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
         private CosmosClient cosmosClient;
         private Database database;
         private Container container;
@@ -22,12 +25,24 @@ namespace ReadImageExif
             var config = new ConfigurationBuilder()
                             .AddUserSecrets<Program>()
                             .Build();
-            Console.WriteLine("Hello World!");
             var cosmosConnectionString = config["Cosmos:ConnectionString"];
-            System.Console.WriteLine(cosmosConnectionString);
 
-            var path = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
-            var di = new DirectoryInfo(path);
+            
+            Settings settings;
+            if (File.Exists(SETTINGS_FILE))
+            {
+                settings = JsonConvert.DeserializeObject<Settings>(await File.ReadAllTextAsync(SETTINGS_FILE));
+            }
+            else
+            {
+                settings = new Settings() { Path = DEFAULT_PATH, LastRun = DateTime.MinValue };
+            }
+
+            var timeNow = DateTime.UtcNow;
+
+
+
+            var di = new DirectoryInfo(settings.Path);
 
             var p = new Program();
 
@@ -39,7 +54,7 @@ namespace ReadImageExif
             // only jpgs taken in the last day
             // the commented out lines were used for testing, but are left them in there for reference
             foreach (var file in di.EnumerateFileSystemInfos()
-                                .Where(f => f.Extension == ".jpg" && f.CreationTimeUtc >= DateTime.UtcNow.AddDays(-1))
+                                .Where(f => f.Extension == ".jpg" && f.CreationTimeUtc >= settings.LastRun)
                                 // .OrderByDescending(f => f.CreationTimeUtc)
                                 // .Skip(1000)
                                 // .Take(10)
@@ -51,8 +66,12 @@ namespace ReadImageExif
                 fileData.ExifData = file.FullName.GetExifData();
 
                 await p.AddItemToContainerAsync(fileData);
-
             }
+
+            settings.LastRun = timeNow;
+
+            await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
+            
         }
 
         private void CreateCosmosClient(string connectionString)
