@@ -15,3 +15,53 @@ There's also a LINQ implementation in the .NET Cosmos SDK
 
 I also worked out how to read User Secrets in .NET Core console apps
 ​​​​​​
+## `GetExifData()` Extension Method
+
+Created the `GetExifData()` extension method to grab all the EXIF data available for a `Path` string.
+
+I generated the first pass of the population of the `ExifData` class and the extraction method by using `Enum.GetValues()` on the `ExifLib.ExifTags` enum and pasting the output into a [spreadsheet](./enum.xlsx). Then used a formula to generate the C# code to paste into the files.
+
+This generated something like this for the extension method:
+
+``` CSharp
+string gpsdestlatituderef; if (reader.GetTagValue<string>(ExifTags.GPSDestLatitudeRef, out gpsdestlatituderef)) exifData.GPSDestLatitudeRef = gpsdestlatituderef;
+```
+
+and this in the class definition:
+
+``` CSharp
+public string GPSDestLatitudeRef { get; set; }
+```
+
+Next, I ran the method over a selection of my JPEG files to see what broke.
+
+Sometimes, the type was always wrong, so I updated the spreadsheet to:
+
+``` CSharp
+Double gpsimgdirection; if (reader.GetTagValue<Double>(ExifTags.GPSImgDirection, out gpsimgdirection)) exifData.GPSImgDirection = gpsimgdirection;
+```
+
+and
+
+``` CSharp
+public Double GPSImgDirection { get; set; }
+```
+
+Other times, it varied between (I guess) Exif versions, so I ended up with a bunch of conditional logic:
+
+``` CSharp
+UInt32 imagewidth;
+try
+{
+    if (reader.GetTagValue<UInt32>(ExifTags.ImageWidth, out imagewidth))
+        exifData.ImageWidth = imagewidth;
+}
+catch (Exception)
+{
+    UInt16 imageWidth16;
+    if (reader.GetTagValue<UInt16>(ExifTags.ImageWidth, out imageWidth16))
+        exifData.ImageWidth = (UInt32)imageWidth16;
+}
+```
+
+Through a series of trial and error, I got to the current implementation which doesn't break on any of my current sample of JPEGs.
