@@ -35,7 +35,7 @@ namespace ReadImageExif
             }
             else
             {
-                settings = new Settings() { Path = DEFAULT_PATH, LastRun = DateTime.MinValue };
+                settings = new Settings() { Path = DEFAULT_PATH, LastRun = DateTime.MinValue, Locations = new Location[]{} };
             }
 
             var timeNow = DateTime.UtcNow;
