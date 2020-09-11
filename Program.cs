@@ -70,8 +70,33 @@ namespace ReadImageExif
 
             settings.LastRun = timeNow;
 
+            foreach (var loc in settings.Locations.Where(l=>l.Process))
+            {
+                // await p.GetMatchingFiles(loc, settings.LastRun);
+                await p.GetMatchingFiles(loc, DateTime.MinValue);
+            }
+
             await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
+
+
             
+        }
+
+        private async Task GetMatchingFiles(Location loc, DateTime lastRun)
+        {
+            foreach (var fd in container.GetItemLinqQueryable<FileData>(allowSynchronousQueryExecution: true)
+                .Where(
+                    f=>f.ExifData.DateTimeDigitized >= lastRun 
+                    && f.ExifData.Location.Distance(loc.Coordinates) <= loc.Threshold
+                )
+            )
+            {
+                if (File.Exists(fd.FileName))
+                {
+                    var diLoc = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), loc.Name));
+                    File.Copy(fd.FileName, Path.Combine(diLoc.FullName, Path.GetFileName(fd.FileName)), true);
+                }
+            }
         }
 
         private void CreateCosmosClient(string connectionString)

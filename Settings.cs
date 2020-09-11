@@ -12,6 +12,7 @@ namespace ReadImageExif
 
     public class Location{
         public string Name { get; set; }
+        public bool Process { get; set; }
         public Double Threshold { get; set; }
         public Point Coordinates { get; set; }
     }
