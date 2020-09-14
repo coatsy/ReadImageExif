@@ -73,8 +73,8 @@ namespace ReadImageExif
 
             foreach (var loc in settings.Locations.Where(l => l.Process))
             {
-                // await p.GetMatchingFiles(loc, settings.LastRun, settings.OutputPath);
-                await p.GetMatchingFiles(loc, DateTime.MinValue, settings.OutputPath);
+                await p.GetMatchingFiles(loc, settings.LastRun, settings.OutputPath);
+                // await p.GetMatchingFiles(loc, DateTime.MinValue, settings.OutputPath);
             }
 
             await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
