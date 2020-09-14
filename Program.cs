@@ -12,7 +12,8 @@ namespace ReadImageExif
     class Program
     {
         const string SETTINGS_FILE = "./settings.json";
-        const string DEFAULT_PATH = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
+        const string DEFAULT_SOURCE_PATH = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
+        const string DEFAULT_OUTPUT_PATH = @"C:\Temp";
         private CosmosClient cosmosClient;
         private Database database;
         private Container container;
@@ -27,7 +28,7 @@ namespace ReadImageExif
                             .Build();
             var cosmosConnectionString = config["Cosmos:ConnectionString"];
 
-            
+
             Settings settings;
             if (File.Exists(SETTINGS_FILE))
             {
@@ -35,14 +36,14 @@ namespace ReadImageExif
             }
             else
             {
-                settings = new Settings() { Path = DEFAULT_PATH, LastRun = DateTime.MinValue, Locations = new Location[]{} };
+                settings = new Settings() { SourcePath = DEFAULT_SOURCE_PATH, OutputPath = DEFAULT_OUTPUT_PATH, LastRun = DateTime.MinValue, Locations = new Location[] { } };
             }
 
             var timeNow = DateTime.UtcNow;
 
 
 
-            var di = new DirectoryInfo(settings.Path);
+            var di = new DirectoryInfo(settings.SourcePath);
 
             var p = new Program();
 
@@ -70,31 +71,35 @@ namespace ReadImageExif
 
             settings.LastRun = timeNow;
 
-            foreach (var loc in settings.Locations.Where(l=>l.Process))
+            foreach (var loc in settings.Locations.Where(l => l.Process))
             {
-                // await p.GetMatchingFiles(loc, settings.LastRun);
-                await p.GetMatchingFiles(loc, DateTime.MinValue);
+                // await p.GetMatchingFiles(loc, settings.LastRun, settings.OutputPath);
+                await p.GetMatchingFiles(loc, DateTime.MinValue, settings.OutputPath);
             }
 
             await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
 
 
-            
+
         }
 
-        private async Task GetMatchingFiles(Location loc, DateTime lastRun)
+        private async Task GetMatchingFiles(Location loc, DateTime lastRun, string outputPath)
         {
             foreach (var fd in container.GetItemLinqQueryable<FileData>(allowSynchronousQueryExecution: true)
                 .Where(
-                    f=>f.ExifData.DateTimeDigitized >= lastRun 
+                    f => f.ExifData.DateTimeDigitized >= lastRun
                     && f.ExifData.Location.Distance(loc.Coordinates) <= loc.Threshold
+                    && f.ExifData.AspectRatioString == "landscape"
                 )
             )
             {
                 if (File.Exists(fd.FileName))
                 {
-                    var diLoc = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), loc.Name));
-                    File.Copy(fd.FileName, Path.Combine(diLoc.FullName, Path.GetFileName(fd.FileName)), true);
+                    var diLoc = Directory.CreateDirectory(Path.Combine(outputPath, loc.Name));
+                    if (!File.Exists(Path.Combine(diLoc.FullName, Path.GetFileName(fd.FileName))))
+                    {
+                        File.Copy(fd.FileName, Path.Combine(diLoc.FullName, Path.GetFileName(fd.FileName)), true);
+                    }
                 }
             }
         }

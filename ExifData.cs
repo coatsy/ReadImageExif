@@ -166,6 +166,33 @@ namespace ReadImageExif
                     (GPSLongitude[0] + GPSLongitude[1] / 60d + GPSLongitude[2] / 3600d) * (GPSLongitudeRef == "W" ? -1d : 1d);
             }
         }
+        public Double AspectRatio
+        {
+            get
+            {
+                if (ImageWidth == 0 || ImageLength == 0)
+                    return 0d;
+                else
+                    return (double)ImageWidth/(double)ImageLength;
+            }
+        }
+        public string AspectRatioString
+        {
+            get {
+                if (AspectRatio > 3.0d)
+                    return "panorama";
+                else if (AspectRatio > 2.0d)
+                    return "wide";
+                else if (AspectRatio > 1.05d)
+                    return "landscape";
+                else if (AspectRatio > 0.95d)
+                    return "square";
+                else if (AspectRatio > 0d)
+                    return "portrait"; 
+                else
+                    return null;
+            }
+        }
         [JsonProperty(PropertyName = "location")]
         public Point Location
         {
