@@ -12,6 +12,7 @@ namespace ReadImageExif
     class Program
     {
         const string SETTINGS_FILE = "./settings.json";
+        const string LAST_RUN_FILE = "./lastrun.json";
         const string DEFAULT_SOURCE_PATH = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
         const string DEFAULT_OUTPUT_PATH = @"C:\Temp";
         private CosmosClient cosmosClient;
@@ -36,11 +37,21 @@ namespace ReadImageExif
             }
             else
             {
-                settings = new Settings() { SourcePath = DEFAULT_SOURCE_PATH, OutputPath = DEFAULT_OUTPUT_PATH, LastRun = DateTime.MinValue, Locations = new Location[] { } };
+                settings = new Settings() { SourcePath = DEFAULT_SOURCE_PATH, OutputPath = DEFAULT_OUTPUT_PATH, Locations = new Location[] { } };
+                await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
+            }
+
+            DateTime lastRun;
+            if (File.Exists(LAST_RUN_FILE))
+            {
+                lastRun = JsonConvert.DeserializeObject<DateTime>(await File.ReadAllTextAsync(LAST_RUN_FILE));
+            }
+            else
+            {
+                lastRun = DateTime.MinValue;
             }
 
             var timeNow = DateTime.UtcNow;
-
 
 
             var di = new DirectoryInfo(settings.SourcePath);
@@ -55,7 +66,7 @@ namespace ReadImageExif
             // only jpgs taken in the last day
             // the commented out lines were used for testing, but are left them in there for reference
             foreach (var file in di.EnumerateFileSystemInfos()
-                                .Where(f => f.Extension == ".jpg" && f.CreationTimeUtc >= settings.LastRun)
+                                .Where(f => f.Extension == ".jpg" && f.CreationTimeUtc >= lastRun)
                                 // .OrderByDescending(f => f.CreationTimeUtc)
                                 // .Skip(1000)
                                 // .Take(10)
@@ -69,18 +80,46 @@ namespace ReadImageExif
                 await p.AddItemToContainerAsync(fileData);
             }
 
-            settings.LastRun = timeNow;
+
+            await File.WriteAllTextAsync(LAST_RUN_FILE, JsonConvert.SerializeObject(DateTime.UtcNow));
 
             foreach (var loc in settings.Locations.Where(l => l.Process))
             {
-                await p.GetMatchingFiles(loc, settings.LastRun, settings.OutputPath);
+                await p.GetMatchingFiles(loc, lastRun, settings.OutputPath);
                 // await p.GetMatchingFiles(loc, DateTime.MinValue, settings.OutputPath);
             }
 
-            await File.WriteAllTextAsync(SETTINGS_FILE, JsonConvert.SerializeObject(settings));
+            await p.GetPhotoLocationsAsText(settings.OutputPath);
+            
 
+        }
 
-
+        private async Task GetPhotoLocationsAsText(string outputPath)
+        {
+            var locs = new {
+                type = "Feature Collection", 
+                features = container.GetItemLinqQueryable<FileData>(allowSynchronousQueryExecution: true)
+                    .Where(fd=> fd.ExifData.Location != null 
+                        )
+                    .Select(f=> new {type = "Feature", id = f.Id,  properties= new {fileName = f.FileName},  geometry = new {type="Point", coordinates= new Double[] {f.ExifData.GPSLongitudeDecimal.Value, f.ExifData.GPSLatitudeDecimal.Value, 0d}}}),
+                bbox = new Double[] {
+                    -122.52323605555556,
+                    -45.048291666666664,
+                    0d,
+                    174.76611111111112,
+                    60.706586111111115,
+                    0d
+                }
+                };
+            
+            await File.WriteAllTextAsync(Path.Combine(outputPath, "HeatMapTest.json"), JsonConvert.SerializeObject(locs));
+            using (var file = File.CreateText(Path.Combine(outputPath, "HeatMapTest.csv")))
+            {
+                foreach (var feat in locs.features)
+                {
+                    await file.WriteLineAsync($"{feat.geometry.coordinates[0]},{feat.geometry.coordinates[1]}");
+                }
+            }
         }
 
         private async Task GetMatchingFiles(Location loc, DateTime lastRun, string outputPath)

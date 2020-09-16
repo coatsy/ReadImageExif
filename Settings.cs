@@ -7,7 +7,6 @@ namespace ReadImageExif
     {
         public string SourcePath { get; set; }
         public string OutputPath { get; set; }
-        public DateTime LastRun { get; set; }
         public Location[] Locations { get; set; }
     }
 

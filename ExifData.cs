@@ -154,16 +154,24 @@ namespace ReadImageExif
         {
             get
             {
-                return GPSLatitude == null ? new Double?() :
-                    (GPSLatitude[0] + GPSLatitude[1] / 60d + GPSLatitude[2] / 3600d) * (GPSLatitudeRef == "S" ? -1d : 1d);
+                return GPSLatitude == null 
+                    || double.IsNaN(GPSLatitude[0]) 
+                    || double.IsNaN(GPSLatitude[1]) 
+                    || double.IsNaN(GPSLatitude[2]) 
+                    ? new Double?() 
+                    : (GPSLatitude[0] + GPSLatitude[1] / 60d + GPSLatitude[2] / 3600d) * (GPSLatitudeRef == "S" ? -1d : 1d);
             }
         }
         public Double? GPSLongitudeDecimal
         {
             get
             {
-                return GPSLongitude == null ? new Double?() :
-                    (GPSLongitude[0] + GPSLongitude[1] / 60d + GPSLongitude[2] / 3600d) * (GPSLongitudeRef == "W" ? -1d : 1d);
+                return GPSLongitude == null 
+                    || double.IsNaN(GPSLongitude[0]) 
+                    || double.IsNaN(GPSLongitude[1]) 
+                    || double.IsNaN(GPSLongitude[2]) 
+                    ? new Double?() 
+                    : (GPSLongitude[0] + GPSLongitude[1] / 60d + GPSLongitude[2] / 3600d) * (GPSLongitudeRef == "W" ? -1d : 1d);
             }
         }
         public Double AspectRatio
