@@ -12,7 +12,7 @@ namespace ReadImageExif
     class Program
     {
         const string SETTINGS_FILE = "./settings.json";
-        const string LAST_RUN_FILE = "./lastrun.json";
+        const string LAST_RUN_FILE = "lastrun.json";
         const string DEFAULT_SOURCE_PATH = @"C:\Users\coats\OneDrive\SkyDrive camera roll";
         const string DEFAULT_OUTPUT_PATH = @"C:\Temp";
         private CosmosClient cosmosClient;
@@ -42,7 +42,7 @@ namespace ReadImageExif
             }
 
             DateTime lastRun;
-            if (File.Exists(LAST_RUN_FILE))
+            if (File.Exists(Path.Combine(settings.SourcePath, LAST_RUN_FILE)))
             {
                 lastRun = JsonConvert.DeserializeObject<DateTime>(await File.ReadAllTextAsync(LAST_RUN_FILE));
             }
@@ -81,7 +81,7 @@ namespace ReadImageExif
             }
 
 
-            await File.WriteAllTextAsync(LAST_RUN_FILE, JsonConvert.SerializeObject(DateTime.UtcNow));
+            await File.WriteAllTextAsync(Path.Combine(settings.SourcePath, LAST_RUN_FILE), JsonConvert.SerializeObject(DateTime.UtcNow));
 
             foreach (var loc in settings.Locations.Where(l => l.Process))
             {
